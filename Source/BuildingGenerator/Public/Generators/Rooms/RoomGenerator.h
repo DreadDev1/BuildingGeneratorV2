@@ -33,6 +33,42 @@ protected:
 	
 	TMap<FIntPoint, FCellData> CellMetadata;
 	
+#pragma region Topology Analysis Helpers
+	/**
+	 * Count occupied neighbors in 4 cardinal directions
+	 * @param Cell - Cell to check
+	 * @return Number of occupied neighbors (0-4)
+	 */
+	virtual int32 CountOccupiedNeighbors(FIntPoint Cell) const;
+
+	/**
+	 * Detect walls for a cell (directions with no occupied neighbors)
+	 * @param Cell - Cell to analyze
+	 * @param OutCellData - Cell data to populate with wall directions
+	 */
+	virtual void DetectWalls(FIntPoint Cell, FCellData& OutCellData);
+
+	/**
+	 * Classify cell zone based on neighbor count and wall configuration
+	 * @param NeighborCount - Number of occupied neighbors
+	 * @param WallDirections - Set of wall directions
+	 * @return Classified zone type
+	 */
+	virtual ECellZone ClassifyCellZone(int32 NeighborCount, const TSet<ECellDirection>& WallDirections) const;
+
+	/**
+	 * Get neighbor cell coordinate in a direction
+	 * @param Cell - Starting cell
+	 * @param Direction - Direction to neighbor
+	 * @return Neighbor cell coordinate
+	 */
+	virtual FIntPoint GetNeighborCell(FIntPoint Cell, ECellDirection Direction) const;
+
+	/**
+	 * Check if two wall directions are adjacent (for corner detection)
+	 */
+	virtual bool AreDirectionsAdjacent(ECellDirection Dir1, ECellDirection Dir2) const;
+#pragma endregion
 public:
 #pragma region Initialization
 	/* Initialize the room generator with room data */
@@ -291,6 +327,53 @@ public:
 
 	/* Fill one edge with wall modules using greedy bin packing */
 	void FillWallEdge(EWallEdge Edge);
+#pragma region Topology Analysis	
+	/**
+	 * Analyze room topology and populate CellMetadata
+	 * Should be called after CreateGrid() and floor generation
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Room Generator|Topology")
+	virtual void AnalyzeTopology();
+
+	/**
+	 * Get cell metadata map (for visualization/queries)
+	 */
+	UFUNCTION(BlueprintPure, Category = "Room Generator|Topology")
+	const TMap<FIntPoint, FCellData>& GetCellMetadata() const { return CellMetadata; }
+
+	/**
+	 * Get all cells of a specific zone type
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Room Generator|Topology")
+	TArray<FIntPoint> GetCellsByZone(ECellZone Zone) const;
+
+	/**
+	 * Get all border cells (cells with at least one wall)
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Room Generator|Topology")
+	TArray<FIntPoint> GetBorderCells() const;
+
+	/**
+	 * Get all corner cells (cells with exactly 2 adjacent walls)
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Room Generator|Topology")
+	TArray<FIntPoint> GetCornerCells() const;
+
+	/**
+	 * Get all center cells (cells with no walls)
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Room Generator|Topology")
+	TArray<FIntPoint> GetCenterCells() const;
+
+	/**
+	 * Check if topology has been analyzed
+	 */
+	UFUNCTION(BlueprintPure, Category = "Room Generator|Topology")
+	bool IsTopologyAnalyzed() const { return bTopologyAnalyzed; }
+#pragma endregion 
 #pragma endregion
 	
+private:
+	// Topology analysis flag
+	bool bTopologyAnalyzed = false;
 };

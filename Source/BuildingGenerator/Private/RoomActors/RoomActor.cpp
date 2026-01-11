@@ -174,13 +174,22 @@ void ARoomActor::GenerateFloorMeshes()
 		return;
 	}
 	
+	DebugHelpers->LogImportant(TEXT("Analyzing room topology..."));
+	RoomGenerator->AnalyzeTopology();
+	
+	// Temporary debug - see topology stats
+	int32 BorderCount = RoomGenerator->GetBorderCells().Num();
+	int32 CornerCount = RoomGenerator->GetCornerCells().Num();
+	int32 CenterCount = RoomGenerator->GetCenterCells().Num();
+
+	DebugHelpers->LogImportant(FString::Printf(TEXT("Topology Stats:   Border=%d, Corner=%d, Center=%d"),
+	
+		BorderCount, CornerCount, CenterCount));
 	// SPAWNING: Get placed meshes from generator
 	const TArray<FPlacedMeshInfo>& PlacedMeshes = RoomGenerator->GetPlacedFloorMeshes();
 	DebugHelpers->LogImportant(FString::Printf(TEXT("Spawning %d floor mesh instances... "), PlacedMeshes.Num()));
 	
-	// ✅ REMOVED: No need to get RoomOrigin anymore
-	// ISM components are attached relatively, so instances are in local space
-	
+
 	// SPAWNING: Create ISM components and add instances
 	for (const FPlacedMeshInfo& PlacedMesh : PlacedMeshes)
 	{
@@ -774,7 +783,274 @@ void ARoomActor::UpdateVisualization()
 	if (RoomData && RoomData->ForcedEmptyFloorCells.Num() > 0)
 	{ DebugHelpers->DrawForcedEmptyCells(RoomData->ForcedEmptyFloorCells, GridSize, CellSize, RoomOrigin);}
 	
+	// Draw wall indicators (if topology analyzed and enabled)
+	if (RoomGenerator->IsTopologyAnalyzed() && DebugHelpers->bShowWallDirections)
+	{
+		const TMap<FIntPoint, FCellData>& CellMetadata = RoomGenerator->GetCellMetadata();
+		DebugHelpers->DrawWallIndicators(CellMetadata, CellSize, RoomOrigin);
+	}
+	
 	DebugHelpers->LogVerbose(TEXT("Visualization updated."));
 }
 #pragma endregion
 #endif // WITH_EDITOR
+
+#pragma region Topology Analysis functions
+void URoomGenerator::AnalyzeTopology()
+{
+	if (!bIsInitialized)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("URoomGenerator::AnalyzeTopology - Generator not initialized"));
+		return;
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("URoomGenerator::AnalyzeTopology - Starting topology analysis..."));
+
+	// Clear existing metadata
+	CellMetadata.Empty();
+
+	int32 CellsAnalyzed = 0;
+
+	// Analyze each occupied cell
+	for (int32 Y = 0; Y < GridSize.Y; ++Y)
+	{
+		for (int32 X = 0; X < GridSize.X; ++X)
+		{
+			FIntPoint Cell(X, Y);
+			int32 Index = Y * GridSize.X + X;
+
+			// Only analyze occupied cells (has floor mesh or custom)
+			if (GridState[Index] == EGridCellType::ECT_FloorMesh || 
+			    GridState[Index] == EGridCellType::ECT_Custom)
+			{
+				// Create cell data
+				FCellData CellData(Cell);
+				CellData.bIsOccupied = true;
+
+				// Count neighbors
+				int32 NeighborCount = CountOccupiedNeighbors(Cell);
+
+				// Detect walls
+				DetectWalls(Cell, CellData);
+
+				// Classify zone
+				CellData.CellZone = ClassifyCellZone(NeighborCount, CellData.WallDirections);
+
+				// Store in metadata map
+				CellMetadata.Add(Cell, CellData);
+				CellsAnalyzed++;
+			}
+		}
+	}
+
+	bTopologyAnalyzed = true;
+
+	UE_LOG(LogTemp, Log, TEXT("URoomGenerator::AnalyzeTopology - Analyzed %d cells"), CellsAnalyzed);
+}
+
+int32 URoomGenerator::CountOccupiedNeighbors(FIntPoint Cell) const
+{
+	int32 Count = 0;
+
+	// Check all 4 cardinal directions
+	TArray<ECellDirection> Directions = { 
+		ECellDirection::North, 
+		ECellDirection::East, 
+		ECellDirection::South, 
+		ECellDirection:: West 
+	};
+
+	for (ECellDirection Direction : Directions)
+	{
+		FIntPoint Neighbor = GetNeighborCell(Cell, Direction);
+
+		// Check if neighbor is in bounds
+		if (Neighbor.X >= 0 && Neighbor. X < GridSize.X && 
+		    Neighbor.Y >= 0 && Neighbor.Y < GridSize.Y)
+		{
+			int32 Index = Neighbor.Y * GridSize.X + Neighbor.X;
+
+			// Check if occupied
+			if (GridState[Index] == EGridCellType:: ECT_FloorMesh || 
+			    GridState[Index] == EGridCellType:: ECT_Custom)
+			{
+				Count++;
+			}
+		}
+	}
+
+	return Count;
+}
+
+void URoomGenerator::DetectWalls(FIntPoint Cell, FCellData& OutCellData)
+{
+	// Check all 4 cardinal directions
+	TArray<ECellDirection> Directions = { 
+		ECellDirection::North, 
+		ECellDirection::East, 
+		ECellDirection::South, 
+		ECellDirection:: West 
+	};
+
+	for (ECellDirection Direction : Directions)
+	{
+		FIntPoint Neighbor = GetNeighborCell(Cell, Direction);
+
+		// Wall exists if: 
+		// 1. Neighbor is out of bounds, OR
+		// 2. Neighbor is empty/void
+		bool bIsWall = false;
+
+		if (Neighbor.X < 0 || Neighbor.X >= GridSize.X || 
+		    Neighbor.Y < 0 || Neighbor.Y >= GridSize.Y)
+		{
+			// Out of bounds = wall
+			bIsWall = true;
+		}
+		else
+		{
+			int32 Index = Neighbor.Y * GridSize.X + Neighbor.X;
+
+			// Check if neighbor is empty or void
+			if (GridState[Index] == EGridCellType::ECT_Empty || 
+			    GridState[Index] == EGridCellType::ECT_Void)
+			{
+				bIsWall = true;
+			}
+		}
+
+		if (bIsWall)
+		{
+			OutCellData. WallDirections.Add(Direction);
+		}
+	}
+}
+
+ECellZone URoomGenerator::ClassifyCellZone(int32 NeighborCount, const TSet<ECellDirection>& WallDirections) const
+{
+	int32 WallCount = WallDirections.Num();
+
+	// Dead-end (3 walls)
+	if (WallCount == 3)
+	{
+		return ECellZone::DeadEnd;
+	}
+
+	// Corner (2 walls)
+	if (WallCount == 2)
+	{
+		// Check if walls are adjacent (90° corner) or opposite (corridor)
+		TArray<ECellDirection> Walls = WallDirections. Array();
+		
+		if (AreDirectionsAdjacent(Walls[0], Walls[1]))
+		{
+			// Adjacent walls = corner
+			// TODO: Distinguish internal vs external corners (needs more context)
+			return ECellZone::Corner;
+		}
+		else
+		{
+			// Opposite walls = corridor/border
+			return ECellZone:: Border;
+		}
+	}
+
+	// Border (1 wall)
+	if (WallCount == 1)
+	{
+		return ECellZone::Border;
+	}
+
+	// Center (0 walls)
+	if (WallCount == 0)
+	{
+		return ECellZone::Center;
+	}
+
+	// Default
+	return ECellZone::Center;
+}
+
+FIntPoint URoomGenerator::GetNeighborCell(FIntPoint Cell, ECellDirection Direction) const
+{
+	switch (Direction)
+	{
+		case ECellDirection::North: 
+			return FIntPoint(Cell. X, Cell.Y + 1);
+		case ECellDirection::East:
+			return FIntPoint(Cell.X + 1, Cell.Y);
+		case ECellDirection::South: 
+			return FIntPoint(Cell. X, Cell.Y - 1);
+		case ECellDirection:: West:
+			return FIntPoint(Cell.X - 1, Cell.Y);
+		default:
+			return Cell;
+	}
+}
+
+bool URoomGenerator::AreDirectionsAdjacent(ECellDirection Dir1, ECellDirection Dir2) const
+{
+	// Adjacent pairs: N-E, E-S, S-W, W-N
+	if ((Dir1 == ECellDirection:: North && Dir2 == ECellDirection::East) ||
+	    (Dir1 == ECellDirection::East && Dir2 == ECellDirection::North))
+		return true;
+
+	if ((Dir1 == ECellDirection::East && Dir2 == ECellDirection::South) ||
+	    (Dir1 == ECellDirection:: South && Dir2 == ECellDirection::East))
+		return true;
+
+	if ((Dir1 == ECellDirection::South && Dir2 == ECellDirection::West) ||
+	    (Dir1 == ECellDirection::West && Dir2 == ECellDirection:: South))
+		return true;
+
+	if ((Dir1 == ECellDirection::West && Dir2 == ECellDirection::North) ||
+	    (Dir1 == ECellDirection::North && Dir2 == ECellDirection::West))
+		return true;
+
+	return false;
+}
+
+//========================================================================
+// TOPOLOGY QUERY FUNCTIONS
+//========================================================================
+
+TArray<FIntPoint> URoomGenerator:: GetCellsByZone(ECellZone Zone) const
+{
+	TArray<FIntPoint> Results;
+
+	for (const auto& Pair : CellMetadata)
+	{
+		if (Pair.Value.CellZone == Zone)
+		{
+			Results.Add(Pair.Key);
+		}
+	}
+
+	return Results;
+}
+
+TArray<FIntPoint> URoomGenerator::GetBorderCells() const
+{
+	TArray<FIntPoint> Results;
+
+	for (const auto& Pair : CellMetadata)
+	{
+		if (Pair.Value. IsBorder())
+		{
+			Results.Add(Pair.Key);
+		}
+	}
+
+	return Results;
+}
+
+TArray<FIntPoint> URoomGenerator::GetCornerCells() const
+{
+	return GetCellsByZone(ECellZone::Corner);
+}
+
+TArray<FIntPoint> URoomGenerator::GetCenterCells() const
+{
+	return GetCellsByZone(ECellZone::Center);
+}
+#pragma endregion
