@@ -1,6 +1,6 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
-#include "Spawners/Rooms/RoomSpawner.h"
+#include "RoomActors/RoomActor.h"
 #include "Generators/Rooms/RoomGenerator.h"
 #include "Components/InstancedStaticMeshComponent.h"
 #include "Components/TextRenderComponent.h"
@@ -12,7 +12,7 @@
 #include "Utilities/Spawners/RoomSpawnerHelpers.h" 
 
 // Sets default values
-ARoomSpawner::ARoomSpawner()
+ARoomActor::ARoomActor()
 {
  	// Set this actor to call Tick() every frame (can turn off for performance)
 	PrimaryActorTick.bCanEverTick = false;
@@ -24,19 +24,19 @@ ARoomSpawner::ARoomSpawner()
 	DebugHelpers = CreateDefaultSubobject<UDebugHelpers>(TEXT("DebugHelpers"));
 
 	// Bind delegate so DebugHelpers can request text components
-	DebugHelpers->OnCreateTextComponent.BindUObject(this, &ARoomSpawner::CreateTextRenderComponent);
+	DebugHelpers->OnCreateTextComponent.BindUObject(this, &ARoomActor::CreateTextRenderComponent);
 
 	// Bind destruction delegate
-	DebugHelpers->OnDestroyTextComponent. BindUObject(this, &ARoomSpawner::DestroyTextRenderComponent);
+	DebugHelpers->OnDestroyTextComponent. BindUObject(this, &ARoomActor::DestroyTextRenderComponent);
 
 	DoorwayActorClass = ADoorway::StaticClass();
 	
 	// Initialize flags
 	bIsGenerated = false;
 }
-bool ARoomSpawner::EnsureGeneratorReady()
+bool ARoomActor::EnsureGeneratorReady()
 {
-	UE_LOG(LogTemp, Warning, TEXT("RoomSpawner::EnsureGeneratorReady() called on base class - child should override!"));
+	UE_LOG(LogTemp, Warning, TEXT("RoomActor::EnsureGeneratorReady() called on base class - child should override!"));
 	return false;
 }
 
@@ -44,7 +44,7 @@ bool ARoomSpawner::EnsureGeneratorReady()
 #pragma region In Editor Functions
 
 #pragma region Floor Generation
-void ARoomSpawner::GenerateRoomGrid()
+void ARoomActor::GenerateRoomGrid()
 {
 	DebugHelpers->LogSectionHeader(TEXT("GENERATE ROOM GRID"));
 	
@@ -75,7 +75,7 @@ void ARoomSpawner::GenerateRoomGrid()
 	DebugHelpers->LogSectionHeader(TEXT("GENERATE ROOM GRID"));
 }
 
-void ARoomSpawner::ClearRoomGrid()
+void ARoomActor::ClearRoomGrid()
 {
 	DebugHelpers->LogSectionHeader(TEXT("CLEAR ROOM GRID"));
 
@@ -124,7 +124,7 @@ void ARoomSpawner::ClearRoomGrid()
 	DebugHelpers->LogSectionHeader(TEXT("CLEAR ROOM GRID"));
 }
 
-void ARoomSpawner::GenerateFloorMeshes()
+void ARoomActor::GenerateFloorMeshes()
 {
 	DebugHelpers->LogSectionHeader(TEXT("GENERATE FLOOR MESHES"));
 	
@@ -195,7 +195,7 @@ void ARoomSpawner::GenerateFloorMeshes()
 	DebugHelpers->LogSectionHeader(TEXT("GENERATE FLOOR MESHES"));
 }
 
-void ARoomSpawner::ClearFloorMeshes()
+void ARoomActor::ClearFloorMeshes()
 {
 	// Clear all floor ISM components
 	URoomSpawnerHelpers:: ClearISMComponentMap(FloorMeshComponents);
@@ -214,7 +214,7 @@ void ARoomSpawner::ClearFloorMeshes()
 #pragma endregion
 
 #pragma region Wall Generation
-void ARoomSpawner::GenerateWallMeshes()
+void ARoomActor::GenerateWallMeshes()
 {
 	DebugHelpers->LogSectionHeader(TEXT("GENERATE WALL MESHES"));
 
@@ -251,14 +251,14 @@ void ARoomSpawner::GenerateWallMeshes()
 	DebugHelpers->LogSectionHeader(TEXT("GENERATE WALL MESHES"));
 }
 
-void ARoomSpawner::SpawnWallSegment(const FPlacedWallInfo& PlacedWall, const FVector& RoomOrigin)
+void ARoomActor::SpawnWallSegment(const FPlacedWallInfo& PlacedWall, const FVector& RoomOrigin)
 {
 	// Delegate to helper
 	URoomSpawnerHelpers::SpawnWallSegment(this, PlacedWall,WallMeshComponents, 
 	RoomOrigin, TEXT("WallISM_"), DebugHelpers);
 }
 
-void ARoomSpawner::ClearWallMeshes()
+void ARoomActor::ClearWallMeshes()
 {
 	// Clear all wall ISM components
 	URoomSpawnerHelpers::ClearISMComponentMap(WallMeshComponents);
@@ -270,7 +270,7 @@ void ARoomSpawner::ClearWallMeshes()
 #pragma endregion
 
 #pragma region Corner Generation
-void ARoomSpawner::GenerateCornerMeshes()
+void ARoomActor::GenerateCornerMeshes()
 {
 	 DebugHelpers->LogSectionHeader(TEXT("GENERATE CORNER MESHES"));
 
@@ -342,7 +342,7 @@ void ARoomSpawner::GenerateCornerMeshes()
     DebugHelpers->LogSectionHeader(TEXT("GENERATE CORNER MESHES"));
 }
 
-void ARoomSpawner::ClearCornerMeshes()
+void ARoomActor::ClearCornerMeshes()
 {
 	// Clear all corner ISM components
 	URoomSpawnerHelpers::ClearISMComponentMap(CornerMeshComponents);
@@ -358,7 +358,7 @@ void ARoomSpawner::ClearCornerMeshes()
 #pragma endregion
 
 #pragma region Doorway Generation
-void ARoomSpawner::GenerateDoorwayMeshes()
+void ARoomActor::GenerateDoorwayMeshes()
 {
     DebugHelpers->LogSectionHeader(TEXT("GENERATE DOORWAY MESHES"));
 
@@ -464,7 +464,7 @@ void ARoomSpawner::GenerateDoorwayMeshes()
     DebugHelpers->LogSectionHeader(TEXT("GENERATE DOORWAY MESHES"));
 }
 
-void ARoomSpawner::ClearDoorwayMeshes()
+void ARoomActor::ClearDoorwayMeshes()
 {
 	// ✅ CHANGED:  Destroy spawned doorway actors instead of clearing ISM components
     
@@ -486,7 +486,7 @@ void ARoomSpawner::ClearDoorwayMeshes()
 
 // Add these at the end of the file (or with your other generation functions):
 
-void ARoomSpawner::GenerateCeilingMeshes()
+void ARoomActor::GenerateCeilingMeshes()
 {
 	DebugHelpers->LogSectionHeader(TEXT("GENERATE CEILING MESHES"));
 	
@@ -542,7 +542,7 @@ void ARoomSpawner::GenerateCeilingMeshes()
 	DebugHelpers->LogSectionHeader(TEXT("GENERATE CEILING MESHES"));
 }
 
-void ARoomSpawner::ClearCeilingMeshes()
+void ARoomActor::ClearCeilingMeshes()
 {
 	// Clear all ceiling ISM components
 	URoomSpawnerHelpers::ClearISMComponentMap(CeilingMeshComponents);
@@ -563,7 +563,7 @@ void ARoomSpawner::ClearCeilingMeshes()
 #pragma endregion
 #pragma endregion
 
-void ARoomSpawner::RefreshVisualization()
+void ARoomActor::RefreshVisualization()
 {
 	DebugHelpers->LogImportant(TEXT("Refreshing visualization..."));
 
@@ -583,7 +583,7 @@ void ARoomSpawner::RefreshVisualization()
 #pragma endregion
 
 #pragma region Debug Functions
-void ARoomSpawner::ToggleCoordinates()
+void ARoomActor::ToggleCoordinates()
 {
 	DebugHelpers->bShowCoordinates = !DebugHelpers->bShowCoordinates;
 	DebugHelpers->LogImportant(FString::Printf(TEXT("Coordinates display: %s"), 
@@ -610,7 +610,7 @@ void ARoomSpawner::ToggleCoordinates()
 	DebugHelpers->DrawGridCoordinatesWithTextComponents(GridSize, CellSize, RoomOrigin);
 }
 
-void ARoomSpawner:: ToggleGrid()
+void ARoomActor:: ToggleGrid()
 {
 	DebugHelpers->bShowGrid = !DebugHelpers->bShowGrid;
 	DebugHelpers->LogImportant(FString::Printf(TEXT("Grid outline display: %s"), 
@@ -619,7 +619,7 @@ void ARoomSpawner:: ToggleGrid()
 	RefreshVisualization();
 }
 
-void ARoomSpawner:: ToggleCellStates()
+void ARoomActor:: ToggleCellStates()
 {
 	  
 	// Toggle cell state visualization
@@ -644,7 +644,7 @@ void ARoomSpawner:: ToggleCellStates()
 	RefreshVisualization();
 }
 
-UTextRenderComponent* ARoomSpawner::CreateTextRenderComponent(FVector WorldPosition, FString Text, FColor Color, float Scale)
+UTextRenderComponent* ARoomActor::CreateTextRenderComponent(FVector WorldPosition, FString Text, FColor Color, float Scale)
 {
 	// Create new text render component
 	UTextRenderComponent* TextComp = NewObject<UTextRenderComponent>(this);
@@ -675,7 +675,7 @@ UTextRenderComponent* ARoomSpawner::CreateTextRenderComponent(FVector WorldPosit
 	return TextComp;
 }
 
-void ARoomSpawner::DestroyTextRenderComponent(UTextRenderComponent* TextComp)
+void ARoomActor::DestroyTextRenderComponent(UTextRenderComponent* TextComp)
 {
 	if (!TextComp || !TextComp->IsValidLowLevel()) return;
 
@@ -683,7 +683,7 @@ void ARoomSpawner::DestroyTextRenderComponent(UTextRenderComponent* TextComp)
 	TextComp->DestroyComponent();
 }
 
-void ARoomSpawner::LogRoomStatistics()
+void ARoomActor::LogRoomStatistics()
 {
 	if (!RoomGenerator) return;
 
@@ -704,7 +704,7 @@ void ARoomSpawner::LogRoomStatistics()
 	DebugHelpers->LogSectionHeader(TEXT("ROOM STATISTICS"));
 }
 
-void ARoomSpawner::LogFloorStatistics()
+void ARoomActor::LogFloorStatistics()
 {
 	if (!RoomGenerator) return;
 
@@ -728,7 +728,7 @@ void ARoomSpawner::LogFloorStatistics()
 	DebugHelpers->LogSectionHeader(TEXT("FLOOR STATISTICS"));
 }
 
-void ARoomSpawner::UpdateVisualization()
+void ARoomActor::UpdateVisualization()
 {
 	if (!RoomGenerator) return;
 

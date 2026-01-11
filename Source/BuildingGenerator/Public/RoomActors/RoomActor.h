@@ -7,7 +7,7 @@
 #include "Generators/Rooms/RoomGenerator.h"
 #include "Utilities/Debugging/DebugHelpers.h"
 #include "Data/Room/RoomData.h"
-#include "RoomSpawner.generated.h"
+#include "RoomActor.generated.h"
 
 class ADoorway;
 class UWallData;
@@ -17,13 +17,13 @@ class UInstancedStaticMeshComponent;
  * RoomSpawner - Actor responsible for spawning and visualizing rooms in the level
  * Holds RoomGenerator for logic and DebugHelpers for visualization Provides CallInEditor functions for designer workflow */
 UCLASS(Abstract)
-class BUILDINGGENERATOR_API ARoomSpawner : public AActor
+class BUILDINGGENERATOR_API ARoomActor : public AActor
 {
 	GENERATED_BODY()
 	
 public:	
 	// Sets default values for this actor's properties
-	ARoomSpawner();
+	ARoomActor();
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	USceneComponent* SceneRoot;
