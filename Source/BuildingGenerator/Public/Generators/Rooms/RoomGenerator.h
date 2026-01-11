@@ -60,7 +60,7 @@ public:
 	TArray<EGridCellType> GridState;
 	
 	UFUNCTION(BlueprintCallable, Category = "Room Generator")
-	virtual void CreateGrid() PURE_VIRTUAL(URoomGenerator::CreateGrid, );
+	void CreateGrid();
 	UFUNCTION(BlueprintCallable, Category = "Room Generator")
 	void ClearGrid();
 	UFUNCTION(BlueprintCallable, Category = "Room Generator")
@@ -87,7 +87,7 @@ public:
 	UFloorData* FloorData;
 	
 	/* Generate floor meshes using sequential weighted fill algorithm */
-	virtual bool GenerateFloor() PURE_VIRTUAL(URoomGenerator::GenerateFloor, return false;);
+	bool GenerateFloor();
 
 	/* Get list of placed floor meshes */
 	const TArray<FPlacedMeshInfo>& GetPlacedFloorMeshes() const { return PlacedFloorMeshes; }
@@ -121,7 +121,7 @@ public:
 	UWallData* WallData;
 	
 	/* Generate walls for all four edges Uses greedy bin packing (largest modules first) */
-	virtual bool GenerateWalls() PURE_VIRTUAL(URoomGenerator::GenerateWalls, return false;);
+	bool GenerateWalls();
 
 	/* Get list of placed walls */
 	const TArray<FPlacedWallInfo>& GetPlacedWalls() const { return PlacedWallMeshes; }
@@ -144,7 +144,7 @@ public:
 #pragma region Corner Generation
 
 	/* Generate corner pieces for all 4 corners */
-	virtual bool GenerateCorners() PURE_VIRTUAL(URoomGenerator::GenerateCorners, return false;);
+	bool GenerateCorners();
 
 
 	/* Get list of placed corners */
@@ -161,7 +161,7 @@ public:
 	UDoorData* DoorData;
 	
 	/* Generate doorways (manual + automatic standard doorway) */
-	virtual bool GenerateDoorways() PURE_VIRTUAL(URoomGenerator::GenerateDoorways, return false;);
+	bool GenerateDoorways();
 
 	/* Mark doorway cells as occupied (called before wall generation) */
 	void MarkDoorwayCells();
@@ -184,7 +184,7 @@ public:
 	
 	/* Generate ceiling tile layout */
 	UFUNCTION(BlueprintCallable, Category = "Room Generation")
-	virtual bool GenerateCeiling() PURE_VIRTUAL(URoomGenerator::GenerateCeiling, return false;);
+	bool GenerateCeiling();
 	
 	/* Get placed ceiling tiles (for spawner) */
 	UFUNCTION(BlueprintPure, Category = "Room Generation")

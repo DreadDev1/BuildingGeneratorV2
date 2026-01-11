@@ -16,7 +16,7 @@ class UInstancedStaticMeshComponent;
 /**
  * RoomSpawner - Actor responsible for spawning and visualizing rooms in the level
  * Holds RoomGenerator for logic and DebugHelpers for visualization Provides CallInEditor functions for designer workflow */
-UCLASS(Abstract)
+UCLASS()
 class BUILDINGGENERATOR_API ARoomActor : public AActor
 {
 	GENERATED_BODY()
@@ -147,10 +147,10 @@ public:
 
 protected:
 	// Ensure RoomGenerator is created and initialized (lightweight)
-	virtual bool EnsureGeneratorReady();
+	bool EnsureGeneratorReady();
 	
 	/* Update visualization based on current grid state */
-	virtual void UpdateVisualization();
+	void UpdateVisualization();
 	
 private:
 	

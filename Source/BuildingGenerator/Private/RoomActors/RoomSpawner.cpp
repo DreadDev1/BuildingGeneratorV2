@@ -6,7 +6,6 @@
 #include "Components/TextRenderComponent.h"
 #include "Data/Generation/RoomGenerationTypes.h"
 #include "Data/Room/DoorData.h" 
-#include "Generators/Rooms/UniformRoomGenerator.h"
 #include "RoomActors/Doorway.h"
 #include "Utilities/Generation/RoomGenerationHelpers.h"
 #include "Utilities/Spawners/RoomSpawnerHelpers.h" 
@@ -36,8 +35,36 @@ ARoomActor::ARoomActor()
 }
 bool ARoomActor::EnsureGeneratorReady()
 {
-	UE_LOG(LogTemp, Warning, TEXT("RoomActor::EnsureGeneratorReady() called on base class - child should override!"));
-	return false;
+	// Validate RoomData
+	if (!RoomData)
+	{ DebugHelpers->LogCritical(TEXT("RoomData is not assigned!")); return false; }
+
+	if (RoomGridSize.X < 4 || RoomGridSize.Y < 4)
+	{ DebugHelpers->LogCritical(TEXT("GridSize is too small (min 4x4)!")); return false; }
+
+	// Create RoomGenerator if needed
+	if (!RoomGenerator)
+	{
+		DebugHelpers->LogVerbose(TEXT("Creating RoomGenerator..."));
+		RoomGenerator = NewObject<URoomGenerator>(this, TEXT("RoomGenerator"));
+
+		if (!RoomGenerator)
+		{ DebugHelpers->LogCritical(TEXT("Failed to create RoomGenerator!")); return false; }
+	}
+
+	// Initialize if needed
+	if (!RoomGenerator->IsInitialized())
+	{
+		DebugHelpers->LogVerbose(TEXT("Initializing RoomGenerator..."));
+
+		if (!RoomGenerator->Initialize(RoomData, RoomGridSize))
+		{ DebugHelpers->LogCritical(TEXT("Failed to initialize RoomGenerator!")); return false; }
+
+		DebugHelpers->LogVerbose(TEXT("Creating grid cells..."));
+		RoomGenerator->CreateGrid();
+	}
+
+	return true;
 }
 
 #if WITH_EDITOR
