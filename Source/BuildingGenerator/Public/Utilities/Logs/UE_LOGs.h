@@ -17,7 +17,14 @@ enum class EDMLogCategory : uint8
 	Socket      UMETA(DisplayName = "Socket"),
 	Data        UMETA(DisplayName = "Data"),
 	Performance UMETA(DisplayName = "Performance"),
-	General     UMETA(DisplayName = "General")
+	General     UMETA(DisplayName = "General"),
+	
+	Floor       UMETA(DisplayName = "Floor"),       
+	Corner      UMETA(DisplayName = "Corner"),     
+	Door        UMETA(DisplayName = "Door"),        
+	Ceiling     UMETA(DisplayName = "Ceiling"),     
+	RoomActor   UMETA(DisplayName = "RoomActor"),   
+	Debug       UMETA(DisplayName = "Debug")        
 };
 
 /* Log verbosity levels */

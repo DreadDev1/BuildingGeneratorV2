@@ -11,6 +11,115 @@ UDebugHelpers::UDebugHelpers()
 	PrimaryComponentTick.bCanEverTick = false;
 }
 
+void UDebugHelpers::SetVisualizationMode(EDebugVisualizationMode Mode)
+{
+	CurrentVisualizationMode = Mode;
+
+	// Apply preset boolean settings based on mode
+	switch (Mode)
+	{
+	case EDebugVisualizationMode::None:
+		bShowGrid = false;
+		bShowCellStates = false;
+		bShowCoordinates = false;
+		bShowWallDirections = false;
+		bShowRoomCenter = false;
+		bShowRoomBounds = false;
+		bShowConnectionPoints = false;
+		bShowForcedEmptyRegions = false;
+		bShowForcedEmptyCells = false;
+		break;
+
+	case EDebugVisualizationMode::Simple:
+		bShowGrid = true;
+		bShowCellStates = false;
+		bShowCoordinates = false;
+		bShowWallDirections = false;
+		bShowRoomCenter = false;
+		bShowRoomBounds = false;
+		bShowConnectionPoints = false;
+		bShowForcedEmptyRegions = false;
+		bShowForcedEmptyCells = false;
+		break;
+
+	case EDebugVisualizationMode:: Detailed:
+		bShowGrid = true;
+		bShowCellStates = false;
+		bShowCoordinates = true;
+		bShowWallDirections = false;
+		bShowRoomCenter = true;
+		bShowRoomBounds = false;
+		bShowConnectionPoints = false;
+		bShowForcedEmptyRegions = false;
+		bShowForcedEmptyCells = false;
+		break;
+
+	case EDebugVisualizationMode::CellTypes:
+		bShowGrid = true;
+		bShowCellStates = true;
+		bShowCoordinates = false;
+		bShowWallDirections = false;
+		bShowRoomCenter = false;
+		bShowRoomBounds = false;
+		bShowConnectionPoints = false;
+		bShowForcedEmptyRegions = false;
+		bShowForcedEmptyCells = false;
+		break;
+
+	case EDebugVisualizationMode::Walls:
+		bShowGrid = true;
+		bShowCellStates = false;
+		bShowCoordinates = false;
+		bShowWallDirections = true;
+		bShowRoomCenter = false;
+		bShowRoomBounds = false;
+		bShowConnectionPoints = false;
+		bShowForcedEmptyRegions = false;
+		bShowForcedEmptyCells = false;
+		break;
+
+	case EDebugVisualizationMode:: Topology:
+		bShowGrid = true;
+		bShowCellStates = true;
+		bShowCoordinates = false;
+		bShowWallDirections = true;
+		bShowRoomCenter = true;
+		bShowRoomBounds = false;
+		bShowConnectionPoints = false;
+		bShowForcedEmptyRegions = false;
+		bShowForcedEmptyCells = false;
+		break;
+
+	case EDebugVisualizationMode::Connections:
+		bShowGrid = true;
+		bShowCellStates = false;
+		bShowCoordinates = false;
+		bShowWallDirections = false;
+		bShowRoomCenter = true;
+		bShowRoomBounds = false;
+		bShowConnectionPoints = true;
+		bShowForcedEmptyRegions = false;
+		bShowForcedEmptyCells = false;
+		break;
+
+	case EDebugVisualizationMode::All:
+		bShowGrid = true;
+		bShowCellStates = true;
+		bShowCoordinates = true;
+		bShowWallDirections = true;
+		bShowRoomCenter = true;
+		bShowRoomBounds = true;
+		bShowConnectionPoints = true;
+		bShowForcedEmptyRegions = true;
+		bShowForcedEmptyCells = true;
+		break;
+	}
+
+	LogImportant(FString::Printf(TEXT("Visualization mode set to: %s"), 
+		*UEnum::GetValueAsString(Mode)));
+}
+
+
 #pragma region Debug Drawing API
 void UDebugHelpers:: DrawGrid(FIntPoint GridSize, const TArray<EGridCellType>& CellStates, float CellSize, FVector OriginLocation)
 {
@@ -349,3 +458,184 @@ void UDebugHelpers::LogSectionHeader(const FString& Title)
 	UE_LOG(LogTemp, Warning, TEXT("%s"), *FullMessage);
 }
 #pragma endregion
+
+void UDebugHelpers::DrawWallIndicators(const TMap<FIntPoint, FCellData>& CellMetadata, float CellSize, FVector OriginLocation)
+{
+	if (!bEnableDebug || !bShowWallDirections)
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	int32 WallCount = 0;
+	int32 OpeningCount = 0;
+
+	for (const auto& Pair : CellMetadata)
+	{
+		const FCellData& CellData = Pair.Value;
+		FVector CellCenter = GridToWorldPosition(CellData. Coordinates, CellSize, OriginLocation);
+		CellCenter.Z += CellBoxZOffset;
+
+		// Draw wall indicators (red arrows)
+		for (ECellDirection Direction : CellData. WallDirections)
+		{
+			DrawDirectionArrow(CellCenter, Direction, WallArrowColor, CellSize);
+			WallCount++;
+		}
+
+		// Draw opening indicators (cyan arrows)
+		for (ECellDirection Direction : CellData.OpenDirections)
+		{
+			DrawDirectionArrow(CellCenter, Direction, OpeningArrowColor, CellSize);
+			OpeningCount++;
+		}
+	}
+
+	LogVerbose(FString::Printf(TEXT("Drew %d walls and %d openings"), WallCount, OpeningCount));
+}
+
+void UDebugHelpers::DrawRoomCenter(FVector CenterLocation)
+{
+	if (!bEnableDebug || !bShowRoomCenter)
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	// Draw center sphere
+	DrawDebugSphere(World, CenterLocation, 50.0f, 16, RoomCenterColor, true, GridLineLifetime, 0, GridLineThickness);
+
+	// Draw RGB coordinate axes (X=Red, Y=Green, Z=Blue)
+	float AxisLength = 150.0f;
+	
+	DrawDebugLine(World, CenterLocation, CenterLocation + FVector(AxisLength, 0, 0), 
+		FColor::Red, true, GridLineLifetime, 0, GridLineThickness * 1.5f);
+	
+	DrawDebugLine(World, CenterLocation, CenterLocation + FVector(0, AxisLength, 0), 
+		FColor::Green, true, GridLineLifetime, 0, GridLineThickness * 1.5f);
+	
+	DrawDebugLine(World, CenterLocation, CenterLocation + FVector(0, 0, AxisLength), 
+		FColor::Blue, true, GridLineLifetime, 0, GridLineThickness * 1.5f);
+
+	LogVerbose(TEXT("Drew room center marker"));
+}
+
+void UDebugHelpers::DrawRoomBounds(FVector BoundsMin, FVector BoundsMax)
+{
+	if (!bEnableDebug || !bShowRoomBounds)
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	FVector Center = (BoundsMin + BoundsMax) * 0.5f;
+	FVector Extent = (BoundsMax - BoundsMin) * 0.5f;
+
+	DrawDebugBox(World, Center, Extent, FQuat::Identity, RoomBoundsColor, true, GridLineLifetime, 0, GridLineThickness);
+
+	LogVerbose(FString::Printf(TEXT("Drew room bounds:  %.0fx%.0f"), Extent.X * 2, Extent.Y * 2));
+}
+
+void UDebugHelpers::DrawConnectionPoints(const TArray<FRoomConnectionPoint>& ConnectionPoints, float CellSize, FVector OriginLocation)
+{
+	if (!bEnableDebug || !bShowConnectionPoints)
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	for (const FRoomConnectionPoint& ConnectionPoint : ConnectionPoints)
+	{
+		FVector Location = GridToWorldPosition(ConnectionPoint.CellLocation, CellSize, OriginLocation);
+		Location.Z += 50.0f;
+
+		// Draw sphere at connection point
+		DrawDebugSphere(World, Location, 30.0f, 12, ConnectionPointColor, true, GridLineLifetime, 0, GridLineThickness);
+
+		// Draw direction arrow
+		DrawDirectionArrow(Location, ConnectionPoint.Direction, ConnectionPointColor, CellSize);
+	}
+
+	LogVerbose(FString::Printf(TEXT("Drew %d connection points"), ConnectionPoints.Num()));
+}
+
+//========================================================================
+// ADVANCED HELPERS
+//========================================================================
+
+void UDebugHelpers::DrawDirectionArrow(FVector CellCenter, ECellDirection Direction, FColor Color, float CellSize)
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	FVector DirectionVec = GetDirectionVector(Direction);
+	float ArrowLength = CellSize * 0.35f;
+	FVector EndLocation = CellCenter + (DirectionVec * ArrowLength);
+
+	DrawDebugDirectionalArrow(World, CellCenter, EndLocation, 15.0f, Color, true, GridLineLifetime, 0, GridLineThickness);
+}
+
+FVector UDebugHelpers:: GetDirectionVector(ECellDirection Direction) const
+{
+	switch (Direction)
+	{
+	case ECellDirection::North:
+		return FVector(0, 1, 0);
+	case ECellDirection::East: 
+		return FVector(1, 0, 0);
+	case ECellDirection::South: 
+		return FVector(0, -1, 0);
+	case ECellDirection::West:
+		return FVector(-1, 0, 0);
+	default:
+		return FVector::ZeroVector;
+	}
+}
+
+FColor UDebugHelpers::GetColorForCellZone(ECellZone Zone) const
+{
+	switch (Zone)
+	{
+	case ECellZone::Empty:
+		return EmptyCellColor;  // Blue
+	case ECellZone:: Center:
+		return FColor::Green;
+	case ECellZone::Border:
+		return FColor::Yellow;
+	case ECellZone::Corner:
+		return FColor::Orange;
+	case ECellZone::ExternalCorner:
+		return FColor:: Red;
+	case ECellZone::InternalCorner:
+		return FColor::Purple;
+	case ECellZone::Door:
+		return DoorCellColor;  // Green
+	case ECellZone:: DeadEnd:
+		return FColor:: Magenta;
+	default:
+		return FColor::White;
+	}
+}

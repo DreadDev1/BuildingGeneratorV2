@@ -220,6 +220,14 @@ FString UUE_LOGs::GetCategoryString(EDMLogCategory Category) const
 		case EDMLogCategory:: Data:        return TEXT("DATA");
 		case EDMLogCategory:: Performance: return TEXT("PERF");
 		case EDMLogCategory::General:     return TEXT("GENERAL");
+		
+		case EDMLogCategory::Floor:        return TEXT("FLOOR");
+		case EDMLogCategory:: Corner:       return TEXT("CORNER");
+		case EDMLogCategory::Door:         return TEXT("DOOR");
+		case EDMLogCategory::Ceiling:      return TEXT("CEILING");
+		case EDMLogCategory::RoomActor:    return TEXT("ROOMACTOR");
+		case EDMLogCategory::Debug:        return TEXT("DEBUG");
+		
 		default:                          return TEXT("UNKNOWN");
 	}
 }

@@ -8,6 +8,21 @@
 #include "DebugHelpers.generated.h"
 
 struct FForcedEmptyRegion;
+
+// Debug visualization mode presets
+UENUM(BlueprintType)
+enum class EDebugVisualizationMode : uint8
+{
+	None UMETA(DisplayName = "None (All Off)"),
+	Simple UMETA(DisplayName = "Simple (Grid Only)"),
+	Detailed UMETA(DisplayName = "Detailed (Grid + Coords + Center)"),
+	CellTypes UMETA(DisplayName = "Cell Types (Color-Coded)"),
+	Walls UMETA(DisplayName = "Walls (Directions + Indicators)"),
+	Topology UMETA(DisplayName = "Topology (Types + Walls)"),
+	Connections UMETA(DisplayName = "Connections (Doors + Center)"),
+	All UMETA(DisplayName = "All (Everything)")
+};
+
 // Log verbosity levels
 UENUM(BlueprintType)
 enum class EDebugLogLevel : uint8
@@ -38,6 +53,86 @@ public:
 	// Master switch for all debug functionality
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug Settings")
 	bool bEnableDebug = true;
+	
+#pragma region Mode System
+	/** Current visualization mode */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug Settings|Mode")
+	EDebugVisualizationMode CurrentVisualizationMode = EDebugVisualizationMode::Simple;
+
+	/**
+	 * Set visualization mode (applies preset boolean settings)
+	 * @param Mode - Visualization mode to apply
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Debug Settings|Mode")
+	void SetVisualizationMode(EDebugVisualizationMode Mode);
+#pragma endregion
+
+#pragma region Advanced Visualization
+	/** Show wall direction indicators (arrows) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug Settings|Visualization")
+	bool bShowWallDirections = false;
+
+	/** Show room center marker */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug Settings|Visualization")
+	bool bShowRoomCenter = false;
+
+	/** Show room bounds box */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug Settings|Visualization")
+	bool bShowRoomBounds = false;
+
+	/** Show connection points (doorways) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug Settings|Visualization")
+	bool bShowConnectionPoints = false;
+
+	/** Room center marker color */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug Settings|Colors")
+	FColor RoomCenterColor = FColor:: Magenta;
+
+	/** Room bounds box color */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug Settings|Colors")
+	FColor RoomBoundsColor = FColor::Purple;
+
+	/** Wall direction arrow color */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug Settings|Colors")
+	FColor WallArrowColor = FColor::Red;
+
+	/** Opening direction arrow color (doors) */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug Settings|Colors")
+	FColor OpeningArrowColor = FColor:: Cyan;
+
+	/** Connection point sphere color */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug Settings|Colors")
+	FColor ConnectionPointColor = FColor::Green;
+#pragma endregion
+	
+#pragma region Advanced Debug Drawing
+	/**
+	 * Draw wall direction indicators (arrows showing N/E/S/W walls)
+	 * Requires: CellMetadata with WallDirections populated
+	 */
+	void DrawWallIndicators(const TMap<FIntPoint, struct FCellData>& CellMetadata, float CellSize, FVector OriginLocation);
+
+	/**
+	 * Draw room center marker (sphere + RGB axes)
+	 * @param CenterLocation - World space center location
+	 */
+	void DrawRoomCenter(FVector CenterLocation);
+
+	/**
+	 * Draw room bounds box
+	 * @param BoundsMin - Minimum bounds corner
+	 * @param BoundsMax - Maximum bounds corner
+	 */
+	void DrawRoomBounds(FVector BoundsMin, FVector BoundsMax);
+
+	/**
+	 * Draw connection points (doorway locations)
+	 * @param ConnectionPoints - Array of connection point data
+	 * @param CellSize - Size of grid cells
+	 * @param OriginLocation - Grid origin
+	 */
+	void DrawConnectionPoints(const TArray<struct FRoomConnectionPoint>& ConnectionPoints, float CellSize, FVector OriginLocation);
+#pragma endregion
 	
 #pragma region Debug Settings|Visualization
 	// Show grid outline
@@ -228,5 +323,28 @@ private:
 
 	/* Check if message should be logged based on current log level */
 	bool ShouldLog(EDebugLogLevel MessageLevel) const;
+#pragma endregion
+	
+#pragma region Advanced Helpers
+	/**
+	 * Draw directional arrow from cell center
+	 * @param CellCenter - Starting location
+	 * @param Direction - Cardinal direction (N/E/S/W)
+	 * @param Color - Arrow color
+	 * @param CellSize - For arrow length calculation
+	 */
+	void DrawDirectionArrow(FVector CellCenter, enum class ECellDirection Direction, FColor Color, float CellSize);
+
+	/**
+	 * Get direction vector from ECellDirection
+	 */
+	FVector GetDirectionVector(enum class ECellDirection Direction) const;
+
+	/**
+	 * Get color for cell zone type (Phase 2 - topology)
+	 * @param Zone - Cell zone type
+	 * @return Color for visualization
+	 */
+	FColor GetColorForCellZone(enum class ECellZone Zone) const;
 #pragma endregion
 };
