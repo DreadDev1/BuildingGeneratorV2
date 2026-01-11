@@ -53,19 +53,6 @@ public:
 	// Master switch for all debug functionality
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug Settings")
 	bool bEnableDebug = true;
-	
-#pragma region Mode System
-	/** Current visualization mode */
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug Settings|Mode")
-	EDebugVisualizationMode CurrentVisualizationMode = EDebugVisualizationMode::Simple;
-
-	/**
-	 * Set visualization mode (applies preset boolean settings)
-	 * @param Mode - Visualization mode to apply
-	 */
-	UFUNCTION(BlueprintCallable, Category = "Debug Settings|Mode")
-	void SetVisualizationMode(EDebugVisualizationMode Mode);
-#pragma endregion
 
 #pragma region Advanced Visualization
 	/** Show wall direction indicators (arrows) */

@@ -33,6 +33,7 @@ ARoomActor::ARoomActor()
 	// Initialize flags
 	bIsGenerated = false;
 }
+
 bool ARoomActor::EnsureGeneratorReady()
 {
 	// Validate RoomData
@@ -69,7 +70,6 @@ bool ARoomActor::EnsureGeneratorReady()
 
 #if WITH_EDITOR
 #pragma region In Editor Functions
-
 #pragma region Floor Generation
 void ARoomActor::GenerateRoomGrid()
 {
@@ -773,6 +773,7 @@ void ARoomActor::UpdateVisualization()
 	// Draw forced empty cells (if any)
 	if (RoomData && RoomData->ForcedEmptyFloorCells.Num() > 0)
 	{ DebugHelpers->DrawForcedEmptyCells(RoomData->ForcedEmptyFloorCells, GridSize, CellSize, RoomOrigin);}
+	
 	DebugHelpers->LogVerbose(TEXT("Visualization updated."));
 }
 #pragma endregion

@@ -18,7 +18,7 @@ struct FGeneratorWallSegment;
 struct FPlacedCeilingInfo;
 
 /* RoomGenerator - Pure logic class for room generation Handles grid creation, mesh placement algorithms, and room data processing */
-UCLASS(Abstract)
+UCLASS()
 class BUILDINGGENERATOR_API URoomGenerator : public UObject
 {
 	GENERATED_BODY()
@@ -30,6 +30,8 @@ public:
 protected:
 	/** Target cell type for floor placement (ECT_Empty for uniform, ECT_Custom for chunky/shaped) */
 	EGridCellType FloorTargetCellType = EGridCellType::ECT_Empty;
+	
+	TMap<FIntPoint, FCellData> CellMetadata;
 	
 public:
 #pragma region Initialization
